@@ -20,6 +20,7 @@ eframe = "0.17.0" # Gives us egui, epi and web+native backends
 instant = "0.1.12"
 serde = { version = "1", features = ["derive"], optional = true }
 rand = "0.8.5"
+getrandom = { version = "0.2", features = ["js"] }
 
 [features]
 default = []
