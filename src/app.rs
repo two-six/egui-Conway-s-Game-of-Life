@@ -70,17 +70,17 @@ impl epi::App for App {
             );
             self.board.update_speed();
 
-            ui.add(egui::Slider::new(&mut self.board.x_axis, 0..=1000)
+            ui.add(egui::Slider::new(&mut self.board.x_axis, -1000..=1000)
                    .step_by(1.0)
                    .orientation(egui::SliderOrientation::Horizontal)
                    .text("X Axis"),
             );
-            ui.add(egui::Slider::new(&mut self.board.y_axis, 0..=1000)
+            ui.add(egui::Slider::new(&mut self.board.y_axis, -1000..=1000)
                    .step_by(1.0)
                    .orientation(egui::SliderOrientation::Horizontal)
                    .text("Y Axis"),
             );
-            ui.add(egui::Slider::new(&mut self.board.b_size, 100..=500)
+            ui.add(egui::Slider::new(&mut self.board.b_size, 10..=500)
                    .step_by(1.0)
                    .orientation(egui::SliderOrientation::Horizontal)
                    .text("Board Size"),
