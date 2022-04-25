@@ -4,27 +4,27 @@ use std::{time::Duration};
 use std::fs;
 use instant::Instant;
 
-#[derive(Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct Pos(pub i32, pub i32);
 
 pub struct Board {
     pub fps: u32,
     pub speed: u128,
-    cells: HashSet<Pos>,
     b_size: i32,
+    cells: HashSet<Pos>,
     last_frame_time: Instant,
-    cell_size: f32,
+    cell_size: i32,
 }
 
 impl Board {
     pub fn new() -> Self {
         Self {
-            fps: 2,
-            speed: Board::fps_to_speed(2.0),
+            fps: 30,
+            speed: Board::fps_to_speed(30.0),
             cells: HashSet::new(),
-            b_size: 100,
             last_frame_time: Instant::now(),
-            cell_size: 5.0
+            b_size: 100,
+            cell_size: 0,
         }
     }
 
@@ -43,9 +43,11 @@ impl Board {
         if duration_since_last_frame.as_millis().lt(&self.speed) {
             return;
         }
+        let (min_x, min_y) = self.find_min();
+        let (max_x, max_y) = self.find_max();
         let mut n_cells = HashSet::new();
-        for col in 0..self.b_size {
-            for row in 0..self.b_size {
+        for col in min_x-2..=max_x+2 {
+            for row in min_y-2..=max_y+2 {
                 let n = self.neighbours(&Pos(col as i32, row as i32));
                 if (n == 2 && self.cells.contains(&Pos(col as i32, row as i32))) || n == 3 {
                     n_cells.insert(Pos(col, row));
@@ -84,13 +86,19 @@ impl Board {
         (max_x, max_y)
     }
 
-    pub fn center_cells(&mut self) {
+    pub fn center_cells(&mut self, rect: Rect) {
         let (min_x, min_y) = self.find_min();
         let (max_x, max_y) = self.find_max();
         let mut elems_c = HashSet::new();
+        if rect.max.x > rect.max.y {
+            self.cell_size = (rect.max.x-rect.min.x) as i32 / self.b_size;
+        } else {
+            self.cell_size = (rect.max.y-rect.min.y) as i32 / self.b_size;
+        }
         for el in &self.cells {
             elems_c.insert(Pos(self.b_size/2-(max_x-min_x)/2 + el.0, self.b_size/2-(max_y-min_y)/2 + el.1));
         }
+
         self.cells = elems_c;
     }
 
@@ -113,13 +121,11 @@ impl Board {
         let contents = fs::read_to_string(f)
             .expect("Error reading from file");
 
-        let lines: Vec<&str> = contents.split('\n').collect();
-
         let mut x = HashSet::new();
-        for l in 0..lines.len() {
-           for (i, c) in lines[l].chars().enumerate() {
+        for (ind, l) in contents.split('\n').enumerate() {
+           for (i, c) in l.chars().enumerate() {
                if c == '#' {
-                   x.insert(Pos(i as i32, l as i32));
+                   x.insert(Pos(i as i32, ind as i32));
                }
            }
         }

@@ -1,6 +1,5 @@
 mod board;
 use eframe::{egui, epi};
-use eframe::epaint::{Pos2, vec2};
 use board::Board;
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
@@ -8,15 +7,16 @@ use board::Board;
 #[cfg_attr(feature = "persistence", serde(default))] // if we add new fields, give them default values when deserializing old state
 pub struct App {
     board: Board,
+    first_time: bool
 }
 
 impl Default for App {
     fn default() -> Self {
         let mut b = Board::new();
-        b.generate_from_file("chemist.txt");
-        b.center_cells();
+        b.generate_from_file("cap.txt");
         Self {
-            board: b
+            board: b,
+            first_time: true
         }
     }
 }
@@ -52,27 +52,26 @@ impl epi::App for App {
     /// Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
     fn update(&mut self, ctx: &egui::Context, _frame: &epi::Frame) {
         ctx.request_repaint();
-        egui::CentralPanel::default().show(ctx, |_| {});
-
-        egui::Window::new("Menu").show(ctx, |ui| {
+        egui::SidePanel::left("Menu").show(ctx, |ui| {
             ui.label("<Options>");
         });
-
-        egui::Window::new("Game")
-            .default_pos(Pos2 {x: 400.0, y: 10.0})
-            .default_size(vec2(500.0, 500.0))
-            .show(ctx, |ui| {
-                let painter = egui::Painter::new(
-                        ui.ctx().clone(),
-                        ui.layer_id(),
-                        ui.available_rect_before_wrap()
-                    );
-                ui.expand_to_include_rect(painter.clip_rect());
-                let rect = painter.clip_rect();
-                let mut shapes = vec![egui::Shape::rect_filled(rect, egui::Rounding::none(), egui::Color32::WHITE)];
-                self.board.generate_cells(&mut shapes, rect);
-                painter.extend(shapes);
-                self.board.update();
-            });
+        egui::CentralPanel::default().show(ctx, |ui| {
+            let painter = egui::Painter::new(
+                    ui.ctx().clone(),
+                    ui.layer_id(),
+                    ui.available_rect_before_wrap()
+                );
+            ui.expand_to_include_rect(painter.clip_rect());
+            let rect = painter.clip_rect();
+            // println!("{},{}", rect.min.x as i32, rect.max.x as i32);
+            let mut shapes = vec![egui::Shape::rect_filled(rect, egui::Rounding::none(), egui::Color32::WHITE)];
+            if self.first_time {
+                self.board.center_cells(rect);
+                self.first_time = false;
+            }
+            self.board.generate_cells(&mut shapes, rect);
+            painter.extend(shapes);
+            self.board.update();
+        });
     }
 }
