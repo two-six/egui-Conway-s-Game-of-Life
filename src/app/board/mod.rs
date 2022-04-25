@@ -25,7 +25,7 @@ pub struct Board {
     pub cell_size: f32,
     pub x_axis: i32,
     pub y_axis: i32,
-    b_size: i32,
+    pub b_size: i32,
     cells: HashSet<Pos>,
     last_frame_time: Instant,
 }
@@ -84,14 +84,17 @@ impl Board {
         if duration_since_last_frame.as_millis().lt(&self.speed) {
             return;
         }
-        let (min_x, min_y) = self.find_min();
-        let (max_x, max_y) = self.find_max();
         let mut n_cells = HashSet::new();
-        for col in min_x-2..=max_x+2 {
-            for row in min_y-2..=max_y+2 {
-                let n = self.neighbours(&Pos(col as i32, row as i32));
-                if (n == 2 && self.cells.contains(&Pos(col as i32, row as i32))) || n == 3 {
-                    n_cells.insert(Pos(col, row));
+        let mut checked = HashSet::new();
+        for el in &self.cells {
+            for step in NEIGHBOURHOOD {
+                let xy = Pos(el.0+step.0, el.1+step.1);
+                if !checked.contains(&xy) {
+                    checked.insert(xy);
+                    let n = self.neighbours(&xy);
+                    if (n == 2 && self.cells.contains(&xy)) || n == 3 {
+                        n_cells.insert(xy);
+                    }
                 }
             }
         }
@@ -159,6 +162,10 @@ impl Board {
     }
 
     pub fn generate_from_file(&mut self, f: &str) {
+        if fs::read_to_string(f).is_err() {
+            println!("Error reading from file");
+            return;
+        };
         let contents = fs::read_to_string(f)
             .expect("Error reading from file");
 

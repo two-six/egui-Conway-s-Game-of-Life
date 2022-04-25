@@ -7,8 +7,9 @@ use board::Board;
 #[cfg_attr(feature = "persistence", serde(default))] // if we add new fields, give them default values when deserializing old state
 pub struct App {
     board: Board,
-    first_time: bool,
     running: bool,
+    filename: String,
+    rect: Option<egui::Rect>,
 }
 
 impl Default for App {
@@ -17,8 +18,9 @@ impl Default for App {
         b.generate_from_file("glider.txt");
         Self {
             board: b,
-            first_time: true,
             running: false,
+            filename: "".to_owned(),
+            rect: None,
         }
     }
 }
@@ -78,6 +80,11 @@ impl epi::App for App {
                    .orientation(egui::SliderOrientation::Horizontal)
                    .text("Y Axis"),
             );
+            ui.add(egui::Slider::new(&mut self.board.b_size, 100..=500)
+                   .step_by(1.0)
+                   .orientation(egui::SliderOrientation::Horizontal)
+                   .text("Board Size"),
+            );
 
             ui.horizontal(|ui| {
                 if ui.add(egui::Button::new("Toggle")).clicked() {
@@ -85,11 +92,22 @@ impl epi::App for App {
                 }
                 if ui.add(egui::Button::new("Random")).clicked() {
                     self.board.generate_random();
+                    self.board.center_cells(self.rect.unwrap());
                 }
                 if ui.add(egui::Button::new("Clean")).clicked() {
                     self.board.clean();
                 }
-            })
+            });
+
+            ui.horizontal(|ui| {
+                ui.add(egui::TextEdit::singleline(&mut self.filename)
+                    .desired_width(150.0)
+                );
+                if ui.add(egui::Button::new("Load from file")).clicked() {
+                    self.board.generate_from_file(&self.filename);
+                    self.board.center_cells(self.rect.unwrap());
+                }
+            });
         });
         egui::CentralPanel::default().show(ctx, |ui| {
             let painter = egui::Painter::new(
@@ -98,13 +116,9 @@ impl epi::App for App {
                     ui.available_rect_before_wrap()
                 );
             ui.expand_to_include_rect(painter.clip_rect());
-            let rect = painter.clip_rect();
-            let mut shapes = vec![egui::Shape::rect_filled(rect, egui::Rounding::none(), egui::Color32::WHITE)];
-            if self.first_time {
-                self.board.center_cells(rect);
-                self.first_time = false;
-            }
-            self.board.generate_cells(&mut shapes, rect);
+            self.rect = Some(painter.clip_rect());
+            let mut shapes = vec![egui::Shape::rect_filled(self.rect.unwrap(), egui::Rounding::none(), egui::Color32::WHITE)];
+            self.board.generate_cells(&mut shapes, self.rect.unwrap());
             painter.extend(shapes);
             if self.running {
                 self.board.update();
