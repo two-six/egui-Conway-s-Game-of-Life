@@ -3,6 +3,18 @@ use eframe::egui::{Color32, Rect, Shape, vec2, Rounding};
 use std::{time::Duration};
 use std::fs;
 use instant::Instant;
+use rand::{Rng, thread_rng};
+
+const NEIGHBOURHOOD: [(i32, i32); 8] = [
+    (-1, -1),
+    (-1, 0),
+    (-1, 1),
+    (1, -1),
+    (1, 0),
+    (1, 1),
+    (0, -1),
+    (0, 1),
+];
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct Pos(pub i32, pub i32);
@@ -10,32 +22,61 @@ pub struct Pos(pub i32, pub i32);
 pub struct Board {
     pub fps: u32,
     pub speed: u128,
+    pub cell_size: f32,
+    pub x_axis: i32,
+    pub y_axis: i32,
     b_size: i32,
     cells: HashSet<Pos>,
     last_frame_time: Instant,
-    cell_size: i32,
 }
 
 impl Board {
     pub fn new() -> Self {
         Self {
-            fps: 30,
-            speed: Board::fps_to_speed(30.0),
+            fps: 10,
+            speed: Board::fps_to_speed(10.0),
             cells: HashSet::new(),
             last_frame_time: Instant::now(),
-            b_size: 100,
-            cell_size: 0,
+            b_size: 75,
+            cell_size: 0.0,
+            x_axis: 0,
+            y_axis: 0,
         }
     }
 
     pub fn neighbours(&self, p: &Pos) -> usize {
-        self.cells.iter()
-            .filter(|l| (l.0-p.0).abs() <= 1 && (l.1-p.1).abs() <= 1 && !(*l == p))
-            .count()
+        let mut neighbours = 0;
+        for step in NEIGHBOURHOOD {
+
+            if self.cells.contains(&Pos(p.0+step.0, p.1+step.1)) {
+                neighbours += 1;
+            }
+        }
+        neighbours
+    }
+
+    pub fn generate_random(&mut self) {
+        self.cells = HashSet::new();
+        for x in 0..=self.b_size {
+            for y in 0..=self.b_size {
+                let ran = thread_rng().gen_range(1..=3);
+                if ran == 1 {
+                    self.cells.insert(Pos(x, y));
+                }
+            }
+        }
+    }
+
+    pub fn clean(&mut self) {
+        self.cells = HashSet::new();
     }
 
     pub fn fps_to_speed(fps: f32) -> u128 {
         Duration::new(0, (1000000000.0 / fps) as u32).as_millis()
+    }
+
+    pub fn update_speed(&mut self) {
+        self.speed = Board::fps_to_speed(self.fps as f32);
     }
 
     pub fn update(&mut self) {
@@ -91,9 +132,9 @@ impl Board {
         let (max_x, max_y) = self.find_max();
         let mut elems_c = HashSet::new();
         if rect.max.x > rect.max.y {
-            self.cell_size = (rect.max.x-rect.min.x) as i32 / self.b_size;
+            self.cell_size = ((rect.max.x-rect.min.x) as i32 / self.b_size) as f32;
         } else {
-            self.cell_size = (rect.max.y-rect.min.y) as i32 / self.b_size;
+            self.cell_size = ((rect.max.y-rect.min.y) as i32 / self.b_size) as f32;
         }
         for el in &self.cells {
             elems_c.insert(Pos(self.b_size/2-(max_x-min_x)/2 + el.0, self.b_size/2-(max_y-min_y)/2 + el.1));
@@ -107,9 +148,9 @@ impl Board {
             shapes.push(Shape::rect_filled(
                 Rect {
                     min: rect.min
-                        + vec2(self.cell_size as f32 * c.0 as f32, self.cell_size as f32 * c.1 as f32),
+                        + vec2(self.cell_size as f32 * c.0 as f32 - self.x_axis as f32, self.cell_size as f32 * c.1 as f32 - self.y_axis as f32),
                     max: rect.min
-                        + vec2(self.cell_size as f32 * (c.0+1) as f32, self.cell_size as f32 * (c.1+1) as f32)
+                        + vec2(self.cell_size as f32 * (c.0+1) as f32 - self.x_axis as f32, self.cell_size as f32 * (c.1+1) as f32 - self.y_axis as f32)
                 },
                 Rounding::none(),
                 Color32::BLACK

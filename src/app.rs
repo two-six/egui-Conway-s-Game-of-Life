@@ -7,16 +7,18 @@ use board::Board;
 #[cfg_attr(feature = "persistence", serde(default))] // if we add new fields, give them default values when deserializing old state
 pub struct App {
     board: Board,
-    first_time: bool
+    first_time: bool,
+    running: bool,
 }
 
 impl Default for App {
     fn default() -> Self {
         let mut b = Board::new();
-        b.generate_from_file("cap.txt");
+        b.generate_from_file("glider.txt");
         Self {
             board: b,
-            first_time: true
+            first_time: true,
+            running: false,
         }
     }
 }
@@ -53,7 +55,41 @@ impl epi::App for App {
     fn update(&mut self, ctx: &egui::Context, _frame: &epi::Frame) {
         ctx.request_repaint();
         egui::SidePanel::left("Menu").show(ctx, |ui| {
-            ui.label("<Options>");
+            ui.add(egui::Slider::new(&mut self.board.cell_size, 0.1..=30.0)
+                   .step_by(0.1)
+                   .orientation(egui::SliderOrientation::Horizontal)
+                   .text("Cell Size"),
+            );
+
+            ui.add(egui::Slider::new(&mut self.board.fps, 1..=60)
+                   .step_by(1.0)
+                   .orientation(egui::SliderOrientation::Horizontal)
+                   .text("FPS"),
+            );
+            self.board.update_speed();
+
+            ui.add(egui::Slider::new(&mut self.board.x_axis, 0..=1000)
+                   .step_by(1.0)
+                   .orientation(egui::SliderOrientation::Horizontal)
+                   .text("X Axis"),
+            );
+            ui.add(egui::Slider::new(&mut self.board.y_axis, 0..=1000)
+                   .step_by(1.0)
+                   .orientation(egui::SliderOrientation::Horizontal)
+                   .text("Y Axis"),
+            );
+
+            ui.horizontal(|ui| {
+                if ui.add(egui::Button::new("Toggle")).clicked() {
+                    self.running = !self.running;
+                }
+                if ui.add(egui::Button::new("Random")).clicked() {
+                    self.board.generate_random();
+                }
+                if ui.add(egui::Button::new("Clean")).clicked() {
+                    self.board.clean();
+                }
+            })
         });
         egui::CentralPanel::default().show(ctx, |ui| {
             let painter = egui::Painter::new(
@@ -63,7 +99,6 @@ impl epi::App for App {
                 );
             ui.expand_to_include_rect(painter.clip_rect());
             let rect = painter.clip_rect();
-            // println!("{},{}", rect.min.x as i32, rect.max.x as i32);
             let mut shapes = vec![egui::Shape::rect_filled(rect, egui::Rounding::none(), egui::Color32::WHITE)];
             if self.first_time {
                 self.board.center_cells(rect);
@@ -71,7 +106,9 @@ impl epi::App for App {
             }
             self.board.generate_cells(&mut shapes, rect);
             painter.extend(shapes);
-            self.board.update();
+            if self.running {
+                self.board.update();
+            }
         });
     }
 }
