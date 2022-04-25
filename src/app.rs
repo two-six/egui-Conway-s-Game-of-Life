@@ -57,7 +57,7 @@ impl epi::App for App {
     fn update(&mut self, ctx: &egui::Context, _frame: &epi::Frame) {
         ctx.request_repaint();
         egui::SidePanel::left("Menu").show(ctx, |ui| {
-            ui.add(egui::Slider::new(&mut self.board.cell_size, 0.1..=30.0)
+            ui.add(egui::Slider::new(&mut self.board.cell_size, 0.1..=50.0)
                    .step_by(0.1)
                    .orientation(egui::SliderOrientation::Horizontal)
                    .text("Cell Size"),
